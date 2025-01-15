@@ -1,7 +1,7 @@
 from openai import OpenAI
 import sys
 
-client = OpenAI(api_key='')# Personal API
+client = OpenAI(api_key='')# Personal API#
 
 assistant = client.beta.assistants.create(
     name="Crypto Scheme Suggester",
