@@ -1,0 +1,76 @@
+from openai import OpenAI
+import sys
+
+client = OpenAI(api_key='')# Personal API
+
+assistant = client.beta.assistants.create(
+    name="Crypto Scheme Suggester",
+    instructions="""
+    <knowledge>
+    Encryption Schemes:
+    - DES: Standardization: Was a US standard. Runtime Efficiency: Was fast, now slower than AES. Security: Breakable via efficient exhaustive key-search attack. Block Length: Short for hash function uses. Adoption Rate: Once widely adopted but significantly declined in usage.
+    - Triple DES: Standardization: Based on DES which was a standard. Runtime Efficiency: Slower than DES and AES. Security: Not known to be efficiently breakable. Block Length: Short for hash function uses. Adoption Rate: Moderately adopted as a more secure alternative to DES. It is still used in legacy systems but is being phased out in favor of newer, more efficient algorithms.
+    - AES: Standardization: Current US standard. Runtime Efficiency: Fast enough for almost all applications (except for resource-constrained devices). Security: Not known to be efficiently breakable. Block Length: Large enough for hash function uses. Adoption Rate: Highly adopted across a broad range of industries and applications.
+    - IDEA: Proposed as a DES replacement. Patents were issued for it. Runtime Efficiency: Fast enough for almost all applications (except for resource-constrained devices). Security: Not known to be efficiently breakable. Block Length: Large enough for hash function uses. Adoption Rate: Limited adoption, mainly used in specific niches like some versions of PGP for secure emails.
+    - SIMON: Standardization: Wannabe standard. Runtime Efficiency: Faster than AES, targeting usage on resource-constrained devices. Security: Breakable with large-computation attack. Block Length: Short (32) to large (128). Adoption Rate: Growing adoption in areas involving IoT devices and embedded systems. 
+    - Twofish: Standardization: Finalist in the AES selection process, not adopted as a standard. Runtime Efficiency: Comparable to AES in speed. Security: Not known to be efficiently breakable. Block Length: Large enough for hash function uses. Adoption Rate: Moderate adoption, favored in some applications for its flexibility and security but overshadowed by the adoption of AES.
+    
+    Modes of Operation:
+    - ECB: Type of mode of operation: Block. Runtime Efficiency: Fastest. Security: Leaks block equality, may leak image. Decrypted data access: Random. Error propagation: No. Parallelization: Yes.
+    - CBC: Type of mode of operation: Block. Runtime Efficiency: Fast enough for almost all applications. Security: Supports IND-CPA if cipher is a Pseudo-random function. Decrypted data access: Sequential. Error propagation: Localized (an error in one block affects only the decryption of that block and the next block). Parallelization: No.
+    - OFB: Type of mode of operation: Stream. Runtime Efficiency: Fast enough for almost all applications. Security: Supports IND-CPA if cipher is a Pseudo-random function. Decrypted data access: Random. Error propagation: No. Parallelization: Yes.
+    - Counter: Type of mode of operation: Stream. Runtime Efficiency: Faster for almost all applications. Security: Supports IND-CPA if cipher is a Pseudo-random function. Decrypted data access: Random. Error propagation: No. Parallelization: Yes.
+    - PCBC: Type of mode of operation: Block. Runtime Efficiency: Fast enough for almost all applications. Security: Supports IND-CPA if cipher is a Pseudo-random function. Decrypted data access: Sequential. Error propagation: Extensive (errors in one block propagate through all subsequent blocks). Parallelization: No.
+    - CFB: Type of mode of operation: Stream. Runtime Efficiency: Fast enough for almost all applications. Security: Supports IND-CPA if cipher is a Pseudo-random function. Decrypted data access: Sequential. Error propagation: Localized to several blocks (error affects several blocks but not as extensive as PCBC). Parallelization: Yes.
+
+    </knowledge>
+
+    'Do you have any specific requirements or preferences for runtime efficiency?'
+    'Do you have any specific requirements or preferences for resource-constrained devices?'
+    'Do you have any specific requirements or preferences for security?'
+    'Do you have any specific requirements or preferences for standardization?'
+    'Do you have any specific requirements or preferences for block length? (short, large)'
+    'Do you have any specific requirements or preferences for types of mode of operation? (block, stream)'
+    'Do you have any specific requirements or preferences for decrypted data access? (random, sequential)'
+    'Do you have any specific requirements or preferences for parallel processing capabilities?'
+    'Do you require error resilience in your encryption system? (i.e., should an error in one part of the ciphertext affect only that part or not at all?)'
+    'Do you have any other specific requirements or preferences?'
+    Ask me these questions in sequential order one by one, only proceeding to the next question once it is satisfied. Otherwise, repeat the same question. At the end, suggest a block cipher choice and a mode of operation, based only on the knowledge base provided!
+    """,
+    model="gpt-4",
+)
+
+thread = client.beta.threads.create()
+
+def handle_ai_response(thread_id):
+    """ Retrieve and print AI responses """
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id,
+        assistant_id=assistant.id,
+    )
+    if run.status == 'completed':
+        messages = client.beta.threads.messages.list(thread_id=thread_id)
+        print(f"AI: {messages.data[0].content[0].text.value}")
+
+def send_user_input(thread_id, user_input):
+    """ Send user input to the thread """
+    client.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=user_input
+    )
+
+def delete_assistant(assistant_id):
+    """ Delete the assistant """
+    client.beta.assistants.delete(assistant_id=assistant_id)
+    print("Assistant has been deleted.")
+
+while True:
+    user_input = input("You: ").strip()
+    if user_input.lower() == "exit":
+        delete_assistant(assistant.id)
+        print("Exiting the cryptographic selection assistant.")
+        sys.exit()
+
+    send_user_input(thread.id, user_input)
+    handle_ai_response(thread.id)
